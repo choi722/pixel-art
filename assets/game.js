@@ -10,6 +10,7 @@
   const promptLabel = document.querySelector(".prompt-label");
   const waveLabel = document.getElementById("wave-label");
   const timeLabel = document.getElementById("time-label");
+  const soundLabel = document.getElementById("sound-label");
 
   const WIDTH = 320;
   const HEIGHT = 180;
@@ -25,6 +26,13 @@
   let lastFrameTime = 0;
   let animationId = 0;
   let highestWave = 1;
+  let previousWave = 1;
+
+  // 사운드는 Web Audio로 실시간 생성하며 외부 음원 파일이 필요 없습니다.
+  let audioContext = null;
+  let masterGain = null;
+  let soundEnabled = true;
+  let audioReady = false;
 
   const ballColors = [
     { base: "#ff638c", dark: "#b83261", light: "#ffb2c4" },
@@ -43,42 +51,122 @@
 
   ctx.imageSmoothingEnabled = false;
   setLogicalCanvasTransform();
+  updateSoundLabel();
 
   function setLogicalCanvasTransform() {
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
     ctx.imageSmoothingEnabled = false;
   }
+
   function getWave() { return Math.floor(elapsed / WAVE_LENGTH) + 1; }
+
+  function initAudio() {
+    if (audioContext) {
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+      return;
+    }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    audioContext = new AudioContextClass();
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = soundEnabled ? 0.28 : 0;
+    masterGain.connect(audioContext.destination);
+    audioReady = true;
+  }
+
+  function updateSoundLabel() {
+    if (soundLabel) soundLabel.textContent = soundEnabled ? "사운드 ON · M 키로 끄기" : "사운드 OFF · M 키로 켜기";
+  }
+
+  function setSoundEnabled(enabled) {
+    soundEnabled = enabled;
+    if (audioContext && masterGain) {
+      const now = audioContext.currentTime;
+      masterGain.gain.cancelScheduledValues(now);
+      masterGain.gain.setTargetAtTime(enabled ? 0.28 : 0, now, 0.025);
+    }
+    updateSoundLabel();
+    if (enabled) playTone(660, 0.09, "sine", 0.12);
+  }
+
+  function playTone(frequency, duration = 0.12, waveform = "sine", volume = 0.5, endFrequency = null) {
+    if (!soundEnabled || !audioContext || !masterGain) return;
+    const now = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = waveform;
+    oscillator.frequency.setValueAtTime(Math.max(1, frequency), now);
+    if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + duration);
+    gain.gain.setValueAtTime(Math.max(0.0001, volume), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.015);
+  }
+
+  function playStartSound() {
+    playTone(440, 0.12, "square", 0.18);
+    window.setTimeout(() => playTone(660, 0.16, "square", 0.14), 95);
+  }
+
+  function playWaveSound(wave) {
+    const base = 520 + Math.min(wave, 12) * 22;
+    playTone(base, 0.13, "triangle", 0.24);
+    window.setTimeout(() => playTone(base * 1.25, 0.18, "triangle", 0.2), 110);
+  }
+
+  function playSniperWarning() {
+    playTone(760, 0.09, "square", 0.16, 430);
+  }
+
+  function playDashSound() {
+    playTone(250, 0.24, "sawtooth", 0.2, 95);
+  }
+
+  function playHitSound() {
+    playTone(180, 0.42, "sawtooth", 0.32, 42);
+    window.setTimeout(() => playTone(95, 0.3, "square", 0.16, 45), 70);
+  }
+
   function updateHud() {
     const wave = getWave();
     highestWave = Math.max(highestWave, wave);
     waveLabel.textContent = wave >= 5 ? `WAVE ${wave} · 저격수 출현` : `WAVE ${wave} · 기본`;
     timeLabel.textContent = `생존 ${elapsed.toFixed(1)}초`;
+    updateSoundLabel();
   }
+
   function resetGame() {
     player = { x: WIDTH / 2, y: HEIGHT / 2, speed: 86 };
     balls = [];
     elapsed = spawnTimer = spawnCount = 0;
-    highestWave = 1;
+    highestWave = previousWave = 1;
     updateHud();
   }
+
   function startGame() {
+    initAudio();
     cancelAnimationFrame(animationId);
     resetGame();
     state = "playing";
     overlay.hidden = true;
     hud.hidden = false;
     lastFrameTime = performance.now();
+    playStartSound();
     animationId = requestAnimationFrame(gameLoop);
   }
+
   function endGame() {
     state = "over";
     hud.hidden = true;
+    playHitSound();
     title.textContent = "게임 종료";
     description.innerHTML = `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>도달한 웨이브: <strong>${highestWave}</strong>`;
     promptLabel.textContent = "다시 하려면 Enter 또는 Space";
     overlay.hidden = false;
   }
+
   function drawBackground() {
     ctx.fillStyle = "#101027";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -90,6 +178,7 @@
       ctx.fillRect((i * 73 + 19) % WIDTH, (i * 47 + 11) % HEIGHT, 1, 1);
     }
   }
+
   function drawSprite(sprite, x, y, palette) {
     const left = Math.round(x - sprite[0].length / 2);
     const top = Math.round(y - sprite.length / 2);
@@ -103,6 +192,7 @@
       }
     }
   }
+
   function drawBall(ball) {
     if (ball.type === "sniper" && ball.phase === "windup") {
       ctx.strokeStyle = Math.floor(ball.age * 14) % 2 === 0 ? "#ff456b" : "#ff9b72";
@@ -123,11 +213,13 @@
       : { D: ball.color.dark, B: ball.color.base, L: ball.color.light, S: "#572c59" };
     drawSprite(ballSprite, ball.x, ball.y, palette);
   }
+
   function drawGame() {
     drawBackground();
     for (const ball of balls) drawBall(ball);
     if (player) drawSprite(playerSprite, player.x, player.y, { C: "#665cff", W: "#a9fff1" });
   }
+
   function spawnBall() {
     const side = Math.floor(Math.random() * 4);
     let x, y;
@@ -152,7 +244,9 @@
       aimX, aimY, dashRange: 0, dashTravelled: 0, remove: false,
       color: ballColors[Math.floor(Math.random() * ballColors.length)]
     });
+    if (isSniper) playSniperWarning();
   }
+
   function updateBall(ball, deltaTime) {
     if (ball.type !== "sniper") {
       ball.x += ball.vx * deltaTime;
@@ -176,6 +270,7 @@
         const dashSpeed = 230;
         ball.vx = ball.aimX * dashSpeed;
         ball.vy = ball.aimY * dashSpeed;
+        playDashSound();
       }
       return;
     }
@@ -191,11 +286,19 @@
     ball.x += ball.vx * deltaTime;
     ball.y += ball.vy * deltaTime;
   }
+
   function gameLoop(now) {
     if (state !== "playing") return;
     const deltaTime = Math.min((now - lastFrameTime) / 1000, 0.04);
     lastFrameTime = now;
     elapsed += deltaTime;
+
+    const wave = getWave();
+    if (wave > previousWave) {
+      previousWave = wave;
+      playWaveSound(wave);
+    }
+
     let moveX = 0, moveY = 0;
     if (keys.has("a")) moveX--;
     if (keys.has("d")) moveX++;
@@ -208,6 +311,7 @@
     }
     player.x = Math.max(5, Math.min(WIDTH - 5, player.x));
     player.y = Math.max(5, Math.min(HEIGHT - 5, player.y));
+
     const difficultyWave = Math.min(getWave(), 4);
     const spawnInterval = Math.max(0.23, 0.82 - (difficultyWave - 1) * 0.08);
     spawnTimer += deltaTime;
@@ -215,6 +319,7 @@
       spawnTimer -= spawnInterval;
       spawnBall();
     }
+
     for (const ball of balls) {
       updateBall(ball, deltaTime);
       if (Math.hypot(ball.x - player.x, ball.y - player.y) < 8) {
@@ -229,6 +334,7 @@
     drawGame();
     animationId = requestAnimationFrame(gameLoop);
   }
+
   function drawTitleScreen() {
     if (state !== "title") return;
     drawBackground();
@@ -250,10 +356,15 @@
 
   window.addEventListener("keydown", event => {
     const key = event.key.toLowerCase();
-    if (["w", "a", "s", "d", " ", "enter"].includes(key)) event.preventDefault();
+    if (["w", "a", "s", "d", " ", "enter", "m"].includes(key)) event.preventDefault();
     if (["w", "a", "s", "d"].includes(key)) keys.add(key);
+    if (key === "m" && !event.repeat) {
+      initAudio();
+      setSoundEnabled(!soundEnabled);
+    }
     if ((key === "enter" || key === " ") && state !== "playing") startGame();
   });
+
   window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
 
