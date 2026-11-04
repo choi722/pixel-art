@@ -13,26 +13,18 @@
   <main class="game-shell">
     <section class="game-frame" aria-label="픽셀 볼 피하기 게임">
       <canvas id="game" width="1920" height="1080" aria-label="WASD로 조작하는 픽셀 볼 피하기 게임"></canvas>
-
       <div class="hud" id="hud" hidden>
         <span class="hud-item" id="wave-label">WAVE 1 · 기본</span>
         <span class="hud-item" id="time-label">생존 0.0초</span>
         <span class="hud-item" id="sound-label">사운드 ON · M 키로 끄기</span>
       </div>
-
       <aside class="admin-panel" id="admin-panel" aria-label="개발자 설정" hidden>
         <strong class="admin-title">DEV SETTINGS</strong>
-        <label class="speed-control" for="speed-slider">
-          플레이어 속도 <output id="speed-value" for="speed-slider">130</output>
-        </label>
-        <input id="speed-slider" type="range" min="80" max="360" step="10" value="130" aria-label="플레이어 속도">
-        <label class="invincible-control" for="invincible-toggle">
-          <input id="invincible-toggle" type="checkbox">
-          무적 모드
-        </label>
-        <small>키보드로 조작 · 닫기: Esc</small>
+        <label class="speed-control" for="speed-slider"><span>플레이어 속도</span><output id="speed-value" for="speed-slider">150</output></label>
+        <input id="speed-slider" type="range" min="80" max="360" step="10" value="150" aria-label="플레이어 속도">
+        <label class="invincible-control" for="invincible-toggle"><input id="invincible-toggle" type="checkbox">무적 모드</label>
+        <small>WASD 이동 · Esc로 패널 닫기</small>
       </aside>
-
       <section class="menu-overlay" id="overlay" aria-labelledby="title">
         <div class="menu-panel">
           <div class="menu-kicker"><span class="kicker-line"></span>PIXEL ARCADE<span class="kicker-line"></span></div>

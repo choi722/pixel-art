@@ -1,12 +1,4 @@
-:root {
-  color-scheme: dark;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --background: #090914;
-  --text: #f7f5ff;
-  --muted: #aaa9c9;
-  --mint: #a9fff1;
-}
-
+:root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; --background: #090914; --text: #f7f5ff; --muted: #aaa9c9; --mint: #a9fff1; }
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--background); }
 body { display: grid; place-items: center; color: var(--text); }
@@ -14,7 +6,7 @@ body { display: grid; place-items: center; color: var(--text); }
 .game-frame { position: relative; width: 100%; height: 100%; overflow: hidden; background: #101027; cursor: none; }
 #game { display: block; width: 100%; height: 100%; background: #101027; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; cursor: none; }
 .hud { position: absolute; z-index: 2; inset: 18px 22px auto; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; font-size: clamp(12px, 1.1vw, 18px); font-weight: 800; text-shadow: 2px 2px #101027; }
-.hud[hidden], .menu-overlay[hidden] { display: none; }
+.hud[hidden], .menu-overlay[hidden], .admin-panel[hidden] { display: none; }
 .hud-item { padding: 8px 12px; border: 1px solid #49466f; background: rgb(17 17 35 / 94%); }
 .menu-overlay { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(9 10 24 / 68%); pointer-events: none; }
 .menu-panel { width: min(540px, 92%); padding: clamp(22px, 4vw, 44px); border: 1px solid #6960a4; background: rgb(17 18 34 / 97%); box-shadow: 0 0 0 6px rgb(16 16 30 / 65%), 0 16px 70px rgb(0 0 0 / 55%); text-align: center; }
@@ -29,13 +21,19 @@ h1 { margin: 0; color: #fff; font-size: clamp(32px, 5vw, 58px); font-weight: 900
 .control-guide { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; color: #bbb9d4; font-size: 12px; }
 .wasd-guide { display: grid; grid-template-columns: repeat(3, 20px); grid-template-rows: repeat(2, 18px); gap: 2px; }
 .wasd-guide kbd, .control-guide kbd { display: grid; place-items: center; border: 1px solid #514d76; color: #e8e5ff; background: #1b1a31; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; font-weight: 800; }
-.wasd-guide kbd:nth-child(1) { grid-column: 2; }
-.wasd-guide kbd:nth-child(2) { grid-column: 1; }
-.wasd-guide kbd:nth-child(3) { grid-column: 2; }
-.wasd-guide kbd:nth-child(4) { grid-column: 3; }
+.wasd-guide kbd:nth-child(1) { grid-column: 2; }.wasd-guide kbd:nth-child(2) { grid-column: 1; }.wasd-guide kbd:nth-child(3) { grid-column: 2; }.wasd-guide kbd:nth-child(4) { grid-column: 3; }
 .control-guide .space-key { min-width: 52px; height: 25px; font-size: 9px; }
 .guide-separator { width: 1px; height: 24px; margin: 0 6px; background: #34334e; }
 .mouse-notice { margin: 22px 0 0; color: #777591; font-size: 10px; letter-spacing: 1px; }
+.admin-panel { position: absolute; z-index: 4; top: 72px; right: 22px; width: min(280px, calc(100% - 32px)); padding: 16px; border: 1px solid #8277d7; background: rgb(17 18 34 / 97%); box-shadow: 0 8px 28px rgb(0 0 0 / 45%); color: var(--text); font-size: 13px; }
+.admin-title { display: block; margin-bottom: 14px; color: var(--mint); letter-spacing: 2px; }
+.speed-control { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.speed-control output { color: var(--mint); font-variant-numeric: tabular-nums; }
+#speed-slider { display: block; width: 100%; accent-color: #8174e9; }
+.invincible-control { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; }
+#invincible-toggle { accent-color: #ff638c; }
+.admin-panel small { display: block; margin-top: 12px; color: var(--muted); }
+.admin-panel :focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 @keyframes prompt-pulse { 50% { border-color: #b0a5ff; background: #3a326c; } }
-@media (max-width: 600px) { .menu-panel { padding: 22px 14px; } .menu-description { margin-bottom: 18px; } .start-prompt { min-width: min(290px, 100%); } .control-guide { gap: 8px; } }
+@media (max-width: 600px) { .menu-panel { padding: 22px 14px; }.menu-description { margin-bottom: 18px; }.start-prompt { min-width: min(290px, 100%); }.control-guide { gap: 8px; }.hud { inset: 8px; gap: 5px; font-size: 10px; }.hud-item { padding: 5px; } }
 @media (prefers-reduced-motion: reduce) { .start-prompt { animation: none; } }
