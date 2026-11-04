@@ -19,9 +19,9 @@
   const WIDTH = 320, HEIGHT = 180, SCALE = 6, WAVE_LENGTH = 12;
   const DEFAULT_SPEED = 150;
   const keys = new Set();
-  // Client-side demo credentials only. Do not use this as real authentication.
-  const ADMIN_NICKNAME = "choi722";
-  const ADMIN_PASSWORD = "admin";
+  // XOR obfuscation only: client-side credentials can always be recovered from downloaded code.
+  const encodedCredential = [57, 50, 53, 51, 109, 104, 104, 96, 59, 62, 55, 51, 52];
+  const credentialParts = String.fromCharCode(...encodedCredential.map(byte => byte ^ 90)).split(":");
 
   let state = "title", player = null, balls = [];
   let elapsed = 0, spawnTimer = 0, spawnCount = 0, lastFrameTime = 0;
@@ -49,7 +49,6 @@
     ctx.imageSmoothingEnabled = false;
   }
   function getWave() { return Math.floor(elapsed / WAVE_LENGTH) + 1; }
-
   function initAudio() {
     if (audioContext) {
       if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
@@ -62,12 +61,10 @@
     masterGain.gain.value = soundEnabled ? 0.24 : 0;
     masterGain.connect(audioContext.destination);
   }
-
   function playTone(frequency, duration = 0.1, waveform = "square", volume = 0.2, endFrequency = null, delay = 0) {
     if (!soundEnabled || !audioContext || !masterGain) return;
     const start = audioContext.currentTime + delay;
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
+    const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
     oscillator.type = waveform;
     oscillator.frequency.setValueAtTime(frequency, start);
     if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
@@ -246,16 +243,14 @@
   }
 
   function authenticateAdmin(nickname, password) {
-    if (nickname !== ADMIN_NICKNAME || password !== ADMIN_PASSWORD) {
-      console.warn("관리자 인증 실패."); return false;
-    }
+    if (nickname !== credentialParts[0] || password !== credentialParts[1]) { console.warn("관리자 인증 실패."); return false; }
     adminAuthenticated = true; adminPanel.hidden = false;
     console.info("관리자 인증 완료. 명령: speed(값), god(true/false), adminLogout()");
     return true;
   }
   function requireAdmin() {
     if (adminAuthenticated) return true;
-    console.warn('먼저 acess("choi722", "admin")으로 인증하세요.'); return false;
+    console.warn('먼저 acess("닉네임", "비밀번호")로 인증하세요.'); return false;
   }
   function setPlayerSpeed(value) {
     if (!requireAdmin()) return false;
@@ -271,13 +266,10 @@
     invincible = Boolean(enabled); invincibleToggle.checked = invincible;
     console.info(`무적 모드 ${invincible ? "ON" : "OFF"}`); return invincible;
   }
-  function logoutAdmin() {
-    adminAuthenticated = false; adminPanel.hidden = true;
-    console.info("관리자 로그아웃 완료.");
-  }
+  function logoutAdmin() { adminAuthenticated = false; adminPanel.hidden = true; console.info("관리자 로그아웃 완료."); }
 
   // DevTools Console: acess("choi722", "admin"), speed(240), god(true), god(false), adminLogout()
-  // 클라이언트 코드에 포함된 값이므로 실제 보안 인증 용도로 사용할 수 없습니다.
+  // This is obfuscation for a local game cheat, not secure authentication.
   window.acess = authenticateAdmin;
   window.access = authenticateAdmin;
   window.speed = setPlayerSpeed;
@@ -285,14 +277,11 @@
   window.adminLogout = logoutAdmin;
   window.adminStatus = () => ({ authenticated: adminAuthenticated, speed: playerSpeed, invincible });
 
-  speedSlider.addEventListener("input", () => {
-    if (adminAuthenticated) setPlayerSpeed(Number(speedSlider.value));
-  });
+  speedSlider.addEventListener("input", () => { if (adminAuthenticated) setPlayerSpeed(Number(speedSlider.value)); });
   invincibleToggle.addEventListener("change", () => {
     if (!adminAuthenticated) { invincibleToggle.checked = false; return; }
     invincible = invincibleToggle.checked;
   });
-
   window.addEventListener("keydown", event => {
     const key = event.key.toLowerCase();
     if (["w", "a", "s", "d", " ", "enter", "m"].includes(key)) event.preventDefault();
@@ -303,6 +292,5 @@
   });
   window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
-
   drawTitleScreen();
 })();
