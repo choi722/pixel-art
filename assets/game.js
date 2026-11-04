@@ -27,12 +27,9 @@
   let animationId = 0;
   let highestWave = 1;
   let previousWave = 1;
-
-  // 사운드는 Web Audio로 실시간 생성하며 외부 음원 파일이 필요 없습니다.
   let audioContext = null;
   let masterGain = null;
   let soundEnabled = true;
-  let audioReady = false;
 
   const ballColors = [
     { base: "#ff638c", dark: "#b83261", light: "#ffb2c4" },
@@ -69,13 +66,16 @@
     if (!AudioContextClass) return;
     audioContext = new AudioContextClass();
     masterGain = audioContext.createGain();
-    masterGain.gain.value = soundEnabled ? 0.28 : 0;
+    masterGain.gain.value = soundEnabled ? 0.24 : 0;
     masterGain.connect(audioContext.destination);
-    audioReady = true;
   }
 
   function updateSoundLabel() {
-    if (soundLabel) soundLabel.textContent = soundEnabled ? "사운드 ON · M 키로 끄기" : "사운드 OFF · M 키로 켜기";
+    if (soundLabel) {
+      soundLabel.textContent = soundEnabled
+        ? "사운드 ON · M 키로 끄기"
+        : "사운드 OFF · M 키로 켜기";
+    }
   }
 
   function setSoundEnabled(enabled) {
@@ -83,56 +83,68 @@
     if (audioContext && masterGain) {
       const now = audioContext.currentTime;
       masterGain.gain.cancelScheduledValues(now);
-      masterGain.gain.setTargetAtTime(enabled ? 0.28 : 0, now, 0.025);
+      masterGain.gain.setTargetAtTime(enabled ? 0.24 : 0, now, 0.025);
     }
     updateSoundLabel();
-    if (enabled) playTone(660, 0.09, "sine", 0.12);
+    if (enabled) playTone(660, 0.07, "square", 0.08);
   }
 
-  function playTone(frequency, duration = 0.12, waveform = "sine", volume = 0.5, endFrequency = null) {
+  function playTone(frequency, duration = 0.1, waveform = "square", volume = 0.25, endFrequency = null, delay = 0) {
     if (!soundEnabled || !audioContext || !masterGain) return;
-    const now = audioContext.currentTime;
+    const start = audioContext.currentTime + delay;
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     oscillator.type = waveform;
-    oscillator.frequency.setValueAtTime(Math.max(1, frequency), now);
-    if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + duration);
-    gain.gain.setValueAtTime(Math.max(0.0001, volume), now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.frequency.setValueAtTime(frequency, start);
+    if (endFrequency) {
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+    }
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.008);
+    gain.gain.setValueAtTime(volume, start + duration * 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     oscillator.connect(gain);
     gain.connect(masterGain);
-    oscillator.start(now);
-    oscillator.stop(now + duration + 0.015);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
   }
 
   function playStartSound() {
-    playTone(440, 0.12, "square", 0.18);
-    window.setTimeout(() => playTone(660, 0.16, "square", 0.14), 95);
+    playTone(440, 0.09, "square", 0.11);
+    playTone(660, 0.13, "square", 0.11, null, 0.1);
   }
 
   function playWaveSound(wave) {
-    const base = 520 + Math.min(wave, 12) * 22;
-    playTone(base, 0.13, "triangle", 0.24);
-    window.setTimeout(() => playTone(base * 1.25, 0.18, "triangle", 0.2), 110);
+    const note = 500 + Math.min(wave, 10) * 24;
+    playTone(note, 0.09, "square", 0.1);
+    playTone(note * 1.25, 0.13, "square", 0.1, null, 0.12);
   }
 
+  // 짧고 명확한 3음 아케이드 경고: "빠-빠-밤!"
   function playSniperWarning() {
-    playTone(760, 0.09, "square", 0.16, 430);
+    if (!soundEnabled || !audioContext) return;
+    playTone(587.33, 0.075, "square", 0.12, null, 0);
+    playTone(698.46, 0.075, "square", 0.13, null, 0.12);
+    playTone(440, 0.2, "square", 0.16, 330, 0.27);
   }
 
   function playDashSound() {
-    playTone(250, 0.24, "sawtooth", 0.2, 95);
+    // 짧은 픽셀 아케이드 발사음. 저음 폭발음 대신 밝은 하강 음을 사용.
+    playTone(880, 0.055, "square", 0.09, 660);
+    playTone(520, 0.11, "triangle", 0.1, 260, 0.045);
   }
 
   function playHitSound() {
-    playTone(180, 0.42, "sawtooth", 0.32, 42);
-    window.setTimeout(() => playTone(95, 0.3, "square", 0.16, 45), 70);
+    playTone(220, 0.23, "square", 0.18, 75);
+    playTone(110, 0.18, "triangle", 0.11, 55, 0.08);
   }
 
   function updateHud() {
     const wave = getWave();
     highestWave = Math.max(highestWave, wave);
-    waveLabel.textContent = wave >= 5 ? `WAVE ${wave} · 저격수 출현` : `WAVE ${wave} · 기본`;
+    waveLabel.textContent = wave >= 5
+      ? `WAVE ${wave} · 저격수 출현`
+      : `WAVE ${wave} · 기본`;
     timeLabel.textContent = `생존 ${elapsed.toFixed(1)}초`;
     updateSoundLabel();
   }
@@ -140,8 +152,11 @@
   function resetGame() {
     player = { x: WIDTH / 2, y: HEIGHT / 2, speed: 86 };
     balls = [];
-    elapsed = spawnTimer = spawnCount = 0;
-    highestWave = previousWave = 1;
+    elapsed = 0;
+    spawnTimer = 0;
+    spawnCount = 0;
+    highestWave = 1;
+    previousWave = 1;
     updateHud();
   }
 
@@ -162,7 +177,9 @@
     hud.hidden = true;
     playHitSound();
     title.textContent = "게임 종료";
-    description.innerHTML = `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>도달한 웨이브: <strong>${highestWave}</strong>`;
+    description.innerHTML =
+      `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>` +
+      `도달한 웨이브: <strong>${highestWave}</strong>`;
     promptLabel.textContent = "다시 하려면 Enter 또는 Space";
     overlay.hidden = false;
   }
@@ -206,7 +223,12 @@
     }
     if (ball.type === "sniper" && ball.phase === "dash") {
       ctx.fillStyle = "#ff456b99";
-      ctx.fillRect(Math.round(ball.x - ball.vx * 0.07 - 2), Math.round(ball.y - ball.vy * 0.07 - 2), 5, 5);
+      ctx.fillRect(
+        Math.round(ball.x - ball.vx * 0.07 - 2),
+        Math.round(ball.y - ball.vy * 0.07 - 2),
+        5,
+        5
+      );
     }
     const palette = ball.type === "sniper"
       ? { D: "#a72d54", B: ball.phase === "dash" ? "#ff375f" : "#ff596d", L: "#ffd0a8", S: "#621f4b" }
@@ -237,6 +259,7 @@
     const isSniper = wave >= 5 && spawnCount % 3 === 0;
     const aimX = dx / distance;
     const aimY = dy / distance;
+
     balls.push({
       x, y, vx: aimX * speed, vy: aimY * speed, speed, age: 0,
       type: isSniper ? "sniper" : "normal",
@@ -329,7 +352,10 @@
         return;
       }
     }
-    balls = balls.filter(ball => !ball.remove && ball.x > -24 && ball.x < WIDTH + 24 && ball.y > -24 && ball.y < HEIGHT + 24);
+    balls = balls.filter(ball =>
+      !ball.remove && ball.x > -24 && ball.x < WIDTH + 24 &&
+      ball.y > -24 && ball.y < HEIGHT + 24
+    );
     updateHud();
     drawGame();
     animationId = requestAnimationFrame(gameLoop);
@@ -364,7 +390,6 @@
     }
     if ((key === "enter" || key === " ") && state !== "playing") startGame();
   });
-
   window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
 
