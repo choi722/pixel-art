@@ -11,12 +11,18 @@
   const waveLabel = document.getElementById("wave-label");
   const timeLabel = document.getElementById("time-label");
   const soundLabel = document.getElementById("sound-label");
+  const adminPanel = document.getElementById("admin-panel");
+  const speedSlider = document.getElementById("speed-slider");
+  const speedValue = document.getElementById("speed-value");
+  const invincibleToggle = document.getElementById("invincible-toggle");
 
   const WIDTH = 320;
   const HEIGHT = 180;
   const SCALE = 6;
   const WAVE_LENGTH = 12;
+  const DEFAULT_SPEED = 130;
   const keys = new Set();
+
   let state = "title";
   let player = null;
   let balls = [];
@@ -27,6 +33,8 @@
   let animationId = 0;
   let highestWave = 1;
   let previousWave = 1;
+  let playerSpeed = DEFAULT_SPEED;
+  let invincible = false;
   let audioContext = null;
   let masterGain = null;
   let soundEnabled = true;
@@ -48,7 +56,8 @@
 
   ctx.imageSmoothingEnabled = false;
   setLogicalCanvasTransform();
-  updateSoundLabel();
+  speedSlider.value = String(DEFAULT_SPEED);
+  speedValue.value = String(DEFAULT_SPEED);
 
   function setLogicalCanvasTransform() {
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
@@ -70,12 +79,26 @@
     masterGain.connect(audioContext.destination);
   }
 
+  function playTone(frequency, duration = 0.1, waveform = "square", volume = 0.2, endFrequency = null, delay = 0) {
+    if (!soundEnabled || !audioContext || !masterGain) return;
+    const start = audioContext.currentTime + delay;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = waveform;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.008);
+    gain.gain.setValueAtTime(volume, start + duration * 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+  }
+
   function updateSoundLabel() {
-    if (soundLabel) {
-      soundLabel.textContent = soundEnabled
-        ? "사운드 ON · M 키로 끄기"
-        : "사운드 OFF · M 키로 켜기";
-    }
+    if (soundLabel) soundLabel.textContent = soundEnabled ? "사운드 ON · M 키로 끄기" : "사운드 OFF · M 키로 켜기";
   }
 
   function setSoundEnabled(enabled) {
@@ -89,26 +112,6 @@
     if (enabled) playTone(660, 0.07, "square", 0.08);
   }
 
-  function playTone(frequency, duration = 0.1, waveform = "square", volume = 0.25, endFrequency = null, delay = 0) {
-    if (!soundEnabled || !audioContext || !masterGain) return;
-    const start = audioContext.currentTime + delay;
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    oscillator.type = waveform;
-    oscillator.frequency.setValueAtTime(frequency, start);
-    if (endFrequency) {
-      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
-    }
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(volume, start + 0.008);
-    gain.gain.setValueAtTime(volume, start + duration * 0.55);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(gain);
-    gain.connect(masterGain);
-    oscillator.start(start);
-    oscillator.stop(start + duration + 0.02);
-  }
-
   function playStartSound() {
     playTone(440, 0.09, "square", 0.11);
     playTone(660, 0.13, "square", 0.11, null, 0.1);
@@ -120,16 +123,14 @@
     playTone(note * 1.25, 0.13, "square", 0.1, null, 0.12);
   }
 
-  // 짧고 명확한 3음 아케이드 경고: "빠-빠-밤!"
+  // 3음 아케이드 경고음: 빠-빠-밤!
   function playSniperWarning() {
-    if (!soundEnabled || !audioContext) return;
-    playTone(587.33, 0.075, "square", 0.12, null, 0);
+    playTone(587.33, 0.075, "square", 0.12);
     playTone(698.46, 0.075, "square", 0.13, null, 0.12);
     playTone(440, 0.2, "square", 0.16, 330, 0.27);
   }
 
   function playDashSound() {
-    // 짧은 픽셀 아케이드 발사음. 저음 폭발음 대신 밝은 하강 음을 사용.
     playTone(880, 0.055, "square", 0.09, 660);
     playTone(520, 0.11, "triangle", 0.1, 260, 0.045);
   }
@@ -142,15 +143,13 @@
   function updateHud() {
     const wave = getWave();
     highestWave = Math.max(highestWave, wave);
-    waveLabel.textContent = wave >= 5
-      ? `WAVE ${wave} · 저격수 출현`
-      : `WAVE ${wave} · 기본`;
+    waveLabel.textContent = wave >= 5 ? `WAVE ${wave} · 저격수 출현` : `WAVE ${wave} · 기본`;
     timeLabel.textContent = `생존 ${elapsed.toFixed(1)}초`;
     updateSoundLabel();
   }
 
   function resetGame() {
-    player = { x: WIDTH / 2, y: HEIGHT / 2, speed: 86 };
+    player = { x: WIDTH / 2, y: HEIGHT / 2, speed: playerSpeed };
     balls = [];
     elapsed = 0;
     spawnTimer = 0;
@@ -175,11 +174,9 @@
   function endGame() {
     state = "over";
     hud.hidden = true;
-    playHitSound();
+    if (!invincible) playHitSound();
     title.textContent = "게임 종료";
-    description.innerHTML =
-      `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>` +
-      `도달한 웨이브: <strong>${highestWave}</strong>`;
+    description.innerHTML = `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>도달한 웨이브: <strong>${highestWave}</strong>`;
     promptLabel.textContent = "다시 하려면 Enter 또는 Space";
     overlay.hidden = false;
   }
@@ -223,12 +220,7 @@
     }
     if (ball.type === "sniper" && ball.phase === "dash") {
       ctx.fillStyle = "#ff456b99";
-      ctx.fillRect(
-        Math.round(ball.x - ball.vx * 0.07 - 2),
-        Math.round(ball.y - ball.vy * 0.07 - 2),
-        5,
-        5
-      );
+      ctx.fillRect(Math.round(ball.x - ball.vx * 0.07 - 2), Math.round(ball.y - ball.vy * 0.07 - 2), 5, 5);
     }
     const palette = ball.type === "sniper"
       ? { D: "#a72d54", B: ball.phase === "dash" ? "#ff375f" : "#ff596d", L: "#ffd0a8", S: "#621f4b" }
@@ -239,7 +231,12 @@
   function drawGame() {
     drawBackground();
     for (const ball of balls) drawBall(ball);
-    if (player) drawSprite(playerSprite, player.x, player.y, { C: "#665cff", W: "#a9fff1" });
+    if (player) {
+      drawSprite(playerSprite, player.x, player.y, {
+        C: invincible ? "#ffca55" : "#665cff",
+        W: invincible ? "#fff2a8" : "#a9fff1"
+      });
+    }
   }
 
   function spawnBall() {
@@ -322,7 +319,8 @@
       playWaveSound(wave);
     }
 
-    let moveX = 0, moveY = 0;
+    let moveX = 0;
+    let moveY = 0;
     if (keys.has("a")) moveX--;
     if (keys.has("d")) moveX++;
     if (keys.has("w")) moveY--;
@@ -345,7 +343,7 @@
 
     for (const ball of balls) {
       updateBall(ball, deltaTime);
-      if (Math.hypot(ball.x - player.x, ball.y - player.y) < 8) {
+      if (!invincible && Math.hypot(ball.x - player.x, ball.y - player.y) < 8) {
         updateHud();
         drawGame();
         endGame();
@@ -380,6 +378,33 @@
     animationId = requestAnimationFrame(drawTitleScreen);
   }
 
+  function openAdminPanel(code) {
+    if (String(code).toLowerCase() !== "admin") {
+      console.warn('관리자 설정을 열려면 access("admin")을 입력하세요.');
+      return false;
+    }
+    adminPanel.hidden = false;
+    console.info("개발자 설정 열림: 속도 슬라이더와 무적 모드를 사용할 수 있습니다. Esc로 닫습니다.");
+    return true;
+  }
+
+  // DevTools Console: access("admin") 또는 accessAdmin()
+  // 이는 클라이언트 게임의 치트/테스트 기능이며 보안 인증 기능이 아닙니다.
+  window.access = openAdminPanel;
+  window.accessAdmin = () => openAdminPanel("admin");
+  window.acess = openAdminPanel; // 사용자가 요청한 철자도 허용
+
+  speedSlider.addEventListener("input", () => {
+    playerSpeed = Number(speedSlider.value);
+    speedValue.value = String(playerSpeed);
+    speedValue.textContent = String(playerSpeed);
+    if (player) player.speed = playerSpeed;
+  });
+
+  invincibleToggle.addEventListener("change", () => {
+    invincible = invincibleToggle.checked;
+  });
+
   window.addEventListener("keydown", event => {
     const key = event.key.toLowerCase();
     if (["w", "a", "s", "d", " ", "enter", "m"].includes(key)) event.preventDefault();
@@ -388,8 +413,13 @@
       initAudio();
       setSoundEnabled(!soundEnabled);
     }
+    if (key === "escape" && !adminPanel.hidden) {
+      adminPanel.hidden = true;
+      canvas.focus?.();
+    }
     if ((key === "enter" || key === " ") && state !== "playing") startGame();
   });
+
   window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
 

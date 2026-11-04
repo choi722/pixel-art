@@ -1,0 +1,24 @@
+/* Developer settings opened from the browser console */
+.admin-panel {
+  position: absolute;
+  z-index: 4;
+  top: 72px;
+  right: 22px;
+  width: min(280px, calc(100% - 32px));
+  padding: 16px;
+  border: 1px solid #8277d7;
+  background: rgb(17 18 34 / 97%);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+  color: #f7f5ff;
+  font-size: 13px;
+}
+
+.admin-panel[hidden] { display: none; }
+.admin-title { display: block; margin-bottom: 14px; color: #a9fff1; letter-spacing: 2px; }
+.speed-control { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.speed-control output { color: #a9fff1; font-variant-numeric: tabular-nums; }
+#speed-slider { display: block; width: 100%; accent-color: #8174e9; }
+.invincible-control { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; }
+#invincible-toggle { accent-color: #ff638c; }
+.admin-panel small { display: block; margin-top: 12px; color: #aaa9c9; }
+.admin-panel :focus-visible { outline: 2px solid #a9fff1; outline-offset: 3px; }
