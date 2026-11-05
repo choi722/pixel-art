@@ -1,0 +1,82 @@
+/* Final phone UI overrides: keep the playfield 16:9 and controls in a separate area. */
+@media (pointer: coarse) and (max-width: 900px) {
+  html, body { width: 100%; height: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
+  body { display: block; }
+  .game-shell, .game-frame { position: relative; display: block; width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; }
+  .game-frame { overflow: hidden; background: #090914; }
+  #game { display: block; position: absolute; max-width: none; max-height: none; margin: 0; image-rendering: pixelated; touch-action: none; }
+
+  /* Portrait: give the game a centered, true 16:9 screen above the touch controls. */
+  .game-frame.layout-portrait #game {
+    top: max(0px, env(safe-area-inset-top)); left: 50%; right: auto; bottom: auto;
+    width: min(100vw, calc((100dvh - 230px) * 1.77778));
+    height: auto; aspect-ratio: 16 / 9; transform: translateX(-50%);
+  }
+  .game-frame.layout-auto #game {
+    top: max(0px, env(safe-area-inset-top)); left: 50%; right: auto; bottom: auto;
+    width: min(100vw, calc((100dvh - 230px) * 1.77778));
+    height: auto; aspect-ratio: 16 / 9; transform: translateX(-50%);
+  }
+  .game-frame.layout-landscape #game { inset: 0; width: 100%; height: 100%; transform: none; }
+
+  .hud {
+    position: absolute; z-index: 3; inset: max(6px, env(safe-area-inset-top)) auto auto 50%;
+    display: flex; width: min(100vw, calc((100dvh - 230px) * 1.77778)); height: auto;
+    flex: none; flex-wrap: nowrap; justify-content: space-between; align-items: flex-start;
+    gap: 4px; transform: translateX(-50%); pointer-events: none;
+    font-size: clamp(9px, 2.8vw, 12px); line-height: 1.2;
+  }
+  .hud-item { display: block; width: auto; min-width: 0; height: auto; padding: 5px 6px; white-space: nowrap; }
+  .game-frame.layout-landscape .hud { inset: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) auto max(8px, env(safe-area-inset-left)); width: auto; transform: none; font-size: clamp(9px, 2.2vh, 12px); }
+
+  .mobile-controls {
+    display: block; position: absolute; z-index: 5; inset: auto 0 0;
+    width: 100%; height: 220px; min-height: 0; padding: 0;
+    background: linear-gradient(180deg, rgb(9 9 20 / 30%), #090914 35%);
+    pointer-events: none; touch-action: none;
+  }
+  .mobile-pad-area { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); width: 124px; height: 124px; pointer-events: auto; touch-action: none; }
+  .joystick { position: absolute; inset: 0; display: grid; place-items: center; border: 2px solid rgb(190 185 255 / 70%); border-radius: 50%; background: rgb(33 31 68 / 68%); touch-action: none; }
+  .joystick-knob { width: 52px; height: 52px; border: 2px solid #d5d0ff; border-radius: 50%; background: #7e70e9; pointer-events: none; }
+  .dpad { position: absolute; inset: 0; display: grid; grid-template: repeat(3, 40px) / repeat(3, 40px); place-content: center; gap: 3px; }
+  .dpad button { border: 1px solid #c0b9ff; border-radius: 9px; color: #fff; background: #323064; font-size: 18px; font-weight: 900; touch-action: none; }
+  .dpad button[data-dir="up"] { grid-area: 1 / 2; }
+  .dpad button[data-dir="left"] { grid-area: 2 / 1; }
+  .dpad button[data-dir="down"] { grid-area: 2 / 2; }
+  .dpad button[data-dir="right"] { grid-area: 2 / 3; }
+  .mobile-start, .control-settings-button {
+    position: absolute; right: max(14px, env(safe-area-inset-right)); z-index: 2;
+    min-height: 44px; padding: 0 13px; border: 1px solid #aaa0ff; border-radius: 10px;
+    color: #fff; background: #27234b; font: inherit; font-size: 13px; font-weight: 800;
+    pointer-events: auto; touch-action: manipulation;
+  }
+  .mobile-start { bottom: max(16px, env(safe-area-inset-bottom)); }
+  .control-settings-button { bottom: max(68px, calc(env(safe-area-inset-bottom) + 60px)); }
+  .control-settings {
+    position: absolute; z-index: 7; right: max(12px, env(safe-area-inset-right));
+    bottom: max(120px, calc(env(safe-area-inset-bottom) + 112px));
+    width: min(270px, calc(100vw - 24px)); max-height: 55dvh; overflow: auto;
+    padding: 14px; border: 1px solid #8277d7; border-radius: 12px;
+    color: #f7f5ff; background: #111222; pointer-events: auto;
+  }
+  .control-settings strong { color: #a9fff1; }
+  .control-settings p { margin: 8px 0; color: #aaa9c9; font-size: 12px; }
+  .control-mode-options, .display-mode-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .display-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 8px; }
+  .control-settings button { min-height: 40px; padding: 4px; border: 1px solid #625a9e; border-radius: 8px; color: #fff; background: #242143; font: inherit; font-size: 12px; }
+  .control-settings button[aria-pressed="true"] { border-color: #a9fff1; color: #a9fff1; }
+  .orientation-hint { line-height: 1.4; }
+
+  /* The title/game-over card stays above the game and is tap-friendly. */
+  .menu-overlay { z-index: 8; display: grid; place-items: center; padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); pointer-events: auto; }
+  .menu-panel { width: min(440px, 100%); max-width: 100%; max-height: 82dvh; overflow-y: auto; padding: 16px 14px; }
+  .menu-kicker { margin-bottom: 8px; }
+  .menu-description { margin: 8px 0 12px; font-size: 13px; line-height: 1.45; }
+  .menu-divider { margin: 12px 0; }
+  .mouse-notice { margin-top: 10px; font-size: 9px; }
+  .start-prompt { display: flex; width: 100%; min-width: 0; min-height: 48px; align-items: center; justify-content: center; padding: 8px; touch-action: manipulation; }
+  .game-frame.layout-landscape .mobile-controls { inset: auto 0 0; height: min(150px, 40dvh); background: linear-gradient(180deg, transparent, #090914d9); }
+  .game-frame.layout-landscape .mobile-pad-area { width: 104px; height: 104px; left: max(10px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); }
+  .game-frame.layout-landscape .mobile-start { bottom: max(8px, env(safe-area-inset-bottom)); }
+  .game-frame.layout-landscape .control-settings-button { bottom: max(58px, calc(env(safe-area-inset-bottom) + 52px)); }
+}
