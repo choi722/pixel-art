@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#090914">
   <title>픽셀 볼 피하기</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -38,6 +38,31 @@
           </div>
           <p class="mouse-notice">M 키: 사운드 켜기/끄기 · 키보드 조작 전용</p>
         </div>
+      </section>
+
+      <section class="mobile-controls" id="mobile-controls" aria-label="모바일 게임 조작">
+        <button class="mobile-start" id="mobile-start" type="button">게임 시작</button>
+        <div class="mobile-pad-area" id="mobile-pad-area">
+          <div class="joystick" id="joystick" role="application" aria-label="가상 조이스틱으로 이동">
+            <div class="joystick-knob" id="joystick-knob"></div>
+          </div>
+          <div class="dpad" id="dpad" aria-label="방향키로 이동" hidden>
+            <button type="button" data-dir="up" aria-label="위">▲</button>
+            <button type="button" data-dir="left" aria-label="왼쪽">◀</button>
+            <button type="button" data-dir="down" aria-label="아래">▼</button>
+            <button type="button" data-dir="right" aria-label="오른쪽">▶</button>
+          </div>
+        </div>
+        <button class="control-settings-button" id="control-settings-button" type="button" aria-expanded="false" aria-controls="control-settings">조작 설정</button>
+        <aside class="control-settings" id="control-settings" aria-label="모바일 조작 설정" hidden>
+          <strong>모바일 조작 설정</strong>
+          <p>원하는 이동 방식을 선택하세요.</p>
+          <div class="control-mode-options">
+            <button type="button" data-control-mode="joystick">조이스틱</button>
+            <button type="button" data-control-mode="dpad">방향키</button>
+          </div>
+          <button type="button" class="settings-close" id="settings-close">닫기</button>
+        </aside>
       </section>
     </section>
   </main>

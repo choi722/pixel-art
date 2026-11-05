@@ -15,11 +15,17 @@
   const speedSlider = document.getElementById("speed-slider");
   const speedValue = document.getElementById("speed-value");
   const invincibleToggle = document.getElementById("invincible-toggle");
+  const mobileStart = document.getElementById("mobile-start");
+  const joystick = document.getElementById("joystick");
+  const joystickKnob = document.getElementById("joystick-knob");
+  const dpad = document.getElementById("dpad");
+  const settingsButton = document.getElementById("control-settings-button");
+  const settingsPanel = document.getElementById("control-settings");
+  const settingsClose = document.getElementById("settings-close");
 
   const WIDTH = 320, HEIGHT = 180, SCALE = 6, WAVE_LENGTH = 12;
   const DEFAULT_SPEED = 150;
   const keys = new Set();
-  // XOR obfuscation only: client-side credentials can always be recovered from downloaded code.
   const encodedCredential = [57, 50, 53, 51, 109, 104, 104, 96, 59, 62, 55, 51, 52];
   const credentialParts = String.fromCharCode(...encodedCredential.map(byte => byte ^ 90)).split(":");
 
@@ -28,6 +34,8 @@
   let animationId = 0, highestWave = 1, previousWave = 1;
   let playerSpeed = DEFAULT_SPEED, invincible = false, adminAuthenticated = false;
   let audioContext = null, masterGain = null, soundEnabled = true;
+  let mobileX = 0, mobileY = 0, joystickPointerId = null;
+  let controlMode = "joystick";
 
   const ballColors = [
     { base: "#ff638c", dark: "#b83261", light: "#ffb2c4" },
@@ -49,6 +57,7 @@
     ctx.imageSmoothingEnabled = false;
   }
   function getWave() { return Math.floor(elapsed / WAVE_LENGTH) + 1; }
+
   function initAudio() {
     if (audioContext) {
       if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
@@ -75,6 +84,37 @@
     oscillator.connect(gain); gain.connect(masterGain);
     oscillator.start(start); oscillator.stop(start + duration + 0.02);
   }
+  function playBoom(delay, strength = 1, duration = 0.28) {
+    if (!soundEnabled || !audioContext || !masterGain) return;
+    const start = audioContext.currentTime + delay;
+    const length = Math.max(1, Math.floor(audioContext.sampleRate * duration));
+    const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+    const noise = audioContext.createBufferSource();
+    const filter = audioContext.createBiquadFilter();
+    const noiseGain = audioContext.createGain();
+    noise.buffer = buffer;
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(900, start);
+    filter.frequency.exponentialRampToValueAtTime(120, start + duration);
+    noiseGain.gain.setValueAtTime(0.0001, start);
+    noiseGain.gain.linearRampToValueAtTime(0.38 * strength, start + 0.006);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+    noise.start(start); noise.stop(start + duration);
+
+    const bass = audioContext.createOscillator();
+    const bassGain = audioContext.createGain();
+    bass.type = "sine";
+    bass.frequency.setValueAtTime(125, start);
+    bass.frequency.exponentialRampToValueAtTime(38, start + duration * 0.9);
+    bassGain.gain.setValueAtTime(0.0001, start);
+    bassGain.gain.linearRampToValueAtTime(0.52 * strength, start + 0.009);
+    bassGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    bass.connect(bassGain); bassGain.connect(masterGain);
+    bass.start(start); bass.stop(start + duration + 0.02);
+  }
   function updateSoundLabel() {
     if (soundLabel) soundLabel.textContent = soundEnabled ? "사운드 ON · M 키로 끄기" : "사운드 OFF · M 키로 켜기";
   }
@@ -97,10 +137,11 @@
     playTone(note, 0.09, "square", 0.1);
     playTone(note * 1.25, 0.13, "square", 0.1, null, 0.12);
   }
+  // Three layered, low-pitched impacts: "콰-콰-광!"
   function playSniperWarning() {
-    playTone(587.33, 0.075, "square", 0.12);
-    playTone(698.46, 0.075, "square", 0.13, null, 0.12);
-    playTone(440, 0.2, "square", 0.16, 330, 0.27);
+    playBoom(0, 0.68, 0.22);
+    playBoom(0.19, 0.82, 0.24);
+    playBoom(0.43, 1.15, 0.4);
   }
   function playDashSound() {
     playTone(880, 0.055, "square", 0.09, 660);
@@ -121,11 +162,11 @@
   function resetGame() {
     player = { x: WIDTH / 2, y: HEIGHT / 2, speed: playerSpeed };
     balls = []; elapsed = 0; spawnTimer = 0; spawnCount = 0; highestWave = 1; previousWave = 1;
-    updateHud();
   }
   function startGame() {
     initAudio(); cancelAnimationFrame(animationId); resetGame();
     state = "playing"; overlay.hidden = true; hud.hidden = false;
+    mobileStart.textContent = "다시 시작";
     lastFrameTime = performance.now(); playStartSound();
     animationId = requestAnimationFrame(gameLoop);
   }
@@ -135,6 +176,7 @@
     title.textContent = "게임 종료";
     description.innerHTML = `생존 시간 <strong>${elapsed.toFixed(1)}초</strong><br>도달한 웨이브: <strong>${highestWave}</strong>`;
     promptLabel.textContent = "다시 하려면 Enter 또는 Space";
+    mobileStart.textContent = "다시 하기";
     overlay.hidden = false;
   }
   function drawBackground() {
@@ -171,9 +213,7 @@
   }
   function drawGame() {
     drawBackground(); for (const ball of balls) drawBall(ball);
-    if (player) drawSprite(playerSprite, player.x, player.y, {
-      C: invincible ? "#ffca55" : "#665cff", W: invincible ? "#fff2a8" : "#a9fff1"
-    });
+    if (player) drawSprite(playerSprite, player.x, player.y, { C: invincible ? "#ffca55" : "#665cff", W: invincible ? "#fff2a8" : "#a9fff1" });
   }
   function spawnBall() {
     const side = Math.floor(Math.random() * 4); let x, y;
@@ -218,9 +258,9 @@
     const dt = Math.min((now - lastFrameTime) / 1000, 0.04); lastFrameTime = now; elapsed += dt;
     const wave = getWave();
     if (wave > previousWave) { previousWave = wave; playWaveSound(wave); }
-    let mx = 0, my = 0;
+    let mx = mobileX, my = mobileY;
     if (keys.has("a")) mx--; if (keys.has("d")) mx++; if (keys.has("w")) my--; if (keys.has("s")) my++;
-    if (mx || my) { const len = Math.hypot(mx, my); player.x += mx / len * player.speed * dt; player.y += my / len * player.speed * dt; }
+    if (mx || my) { const len = Math.hypot(mx, my); if (len > 1) { mx /= len; my /= len; } player.x += mx * player.speed * dt; player.y += my * player.speed * dt; }
     player.x = Math.max(5, Math.min(WIDTH - 5, player.x)); player.y = Math.max(5, Math.min(HEIGHT - 5, player.y));
     const spawnInterval = Math.max(0.23, 0.82 - (Math.min(getWave(), 4) - 1) * 0.08);
     spawnTimer += dt;
@@ -245,8 +285,7 @@
   function authenticateAdmin(nickname, password) {
     if (nickname !== credentialParts[0] || password !== credentialParts[1]) { console.warn("관리자 인증 실패."); return false; }
     adminAuthenticated = true; adminPanel.hidden = false;
-    console.info("관리자 인증 완료. 명령: speed(값), god(true/false), adminLogout()");
-    return true;
+    console.info("관리자 인증 완료. 명령: speed(값), god(true/false), adminLogout()"); return true;
   }
   function requireAdmin() {
     if (adminAuthenticated) return true;
@@ -267,30 +306,100 @@
     console.info(`무적 모드 ${invincible ? "ON" : "OFF"}`); return invincible;
   }
   function logoutAdmin() { adminAuthenticated = false; adminPanel.hidden = true; console.info("관리자 로그아웃 완료."); }
-
-  // DevTools Console: acess("choi722", "admin"), speed(240), god(true), god(false), adminLogout()
-  // This is obfuscation for a local game cheat, not secure authentication.
   window.acess = authenticateAdmin;
   window.access = authenticateAdmin;
   window.speed = setPlayerSpeed;
   window.god = setGodMode;
   window.adminLogout = logoutAdmin;
   window.adminStatus = () => ({ authenticated: adminAuthenticated, speed: playerSpeed, invincible });
-
   speedSlider.addEventListener("input", () => { if (adminAuthenticated) setPlayerSpeed(Number(speedSlider.value)); });
   invincibleToggle.addEventListener("change", () => {
     if (!adminAuthenticated) { invincibleToggle.checked = false; return; }
     invincible = invincibleToggle.checked;
   });
+
+  function setControlMode(mode) {
+    controlMode = mode === "dpad" ? "dpad" : "joystick";
+    joystick.hidden = controlMode !== "joystick";
+    dpad.hidden = controlMode !== "dpad";
+    for (const button of settingsPanel.querySelectorAll("[data-control-mode]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.controlMode === controlMode));
+    }
+    try { localStorage.setItem("pixel-dodge-control-mode", controlMode); } catch (_) { /* storage may be unavailable */ }
+    clearMobileInput();
+  }
+  function clearMobileInput() {
+    mobileX = 0; mobileY = 0; joystickPointerId = null;
+    joystickKnob.style.transform = "translate(0, 0)";
+    keys.delete("w"); keys.delete("a"); keys.delete("s"); keys.delete("d");
+  }
+  function setDpadDirection(button, pressed) {
+    const mapping = { up: "w", left: "a", down: "s", right: "d" };
+    const key = mapping[button.dataset.dir];
+    if (!key) return;
+    if (pressed) keys.add(key); else keys.delete(key);
+  }
+  for (const button of dpad.querySelectorAll("[data-dir]")) {
+    button.addEventListener("pointerdown", event => {
+      event.preventDefault(); button.setPointerCapture(event.pointerId); setDpadDirection(button, true);
+    });
+    const release = event => { event.preventDefault(); setDpadDirection(button, false); };
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("lostpointercapture", () => setDpadDirection(button, false));
+  }
+  function updateJoystick(event) {
+    const rect = joystick.getBoundingClientRect();
+    const radius = rect.width * 0.34;
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > radius ? radius / distance : 1;
+    const x = dx * scale, y = dy * scale;
+    mobileX = x / radius; mobileY = y / radius;
+    if (Math.hypot(mobileX, mobileY) < 0.16) mobileX = mobileY = 0;
+    joystickKnob.style.transform = `translate(${x}px, ${y}px)`;
+  }
+  joystick.addEventListener("pointerdown", event => {
+    event.preventDefault(); joystickPointerId = event.pointerId; joystick.setPointerCapture(event.pointerId); updateJoystick(event);
+  });
+  joystick.addEventListener("pointermove", event => {
+    if (event.pointerId === joystickPointerId) { event.preventDefault(); updateJoystick(event); }
+  });
+  const releaseJoystick = event => {
+    if (event.pointerId !== joystickPointerId) return;
+    mobileX = mobileY = 0; joystickPointerId = null; joystickKnob.style.transform = "translate(0, 0)";
+  };
+  joystick.addEventListener("pointerup", releaseJoystick);
+  joystick.addEventListener("pointercancel", releaseJoystick);
+  joystick.addEventListener("lostpointercapture", releaseJoystick);
+
+  mobileStart.addEventListener("click", startGame);
+  settingsButton.addEventListener("click", () => {
+    settingsPanel.hidden = !settingsPanel.hidden;
+    settingsButton.setAttribute("aria-expanded", String(!settingsPanel.hidden));
+  });
+  settingsClose.addEventListener("click", () => {
+    settingsPanel.hidden = true; settingsButton.setAttribute("aria-expanded", "false"); settingsButton.focus();
+  });
+  for (const button of settingsPanel.querySelectorAll("[data-control-mode]")) {
+    button.addEventListener("click", () => setControlMode(button.dataset.controlMode));
+  }
+  try { setControlMode(localStorage.getItem("pixel-dodge-control-mode") || "joystick"); }
+  catch (_) { setControlMode("joystick"); }
+
   window.addEventListener("keydown", event => {
     const key = event.key.toLowerCase();
     if (["w", "a", "s", "d", " ", "enter", "m"].includes(key)) event.preventDefault();
     if (["w", "a", "s", "d"].includes(key)) keys.add(key);
     if (key === "m" && !event.repeat) { initAudio(); setSoundEnabled(!soundEnabled); }
-    if (key === "escape" && !adminPanel.hidden) adminPanel.hidden = true;
+    if (key === "escape") {
+      if (!settingsPanel.hidden) { settingsPanel.hidden = true; settingsButton.setAttribute("aria-expanded", "false"); }
+      if (!adminPanel.hidden) adminPanel.hidden = true;
+    }
     if ((key === "enter" || key === " ") && state !== "playing") startGame();
   });
   window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
-  window.addEventListener("blur", () => keys.clear());
+  window.addEventListener("blur", () => { keys.clear(); clearMobileInput(); });
   drawTitleScreen();
 })();
