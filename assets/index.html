@@ -8,8 +8,10 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/mobile-layout.css">
+  <link rel="stylesheet" href="/touch-start.css">
   <script src="/game.js" defer></script>
   <script src="/mobile-layout.js" defer></script>
+  <script src="/touch-start.js" defer></script>
 </head>
 <body>
   <main class="game-shell">
@@ -32,7 +34,7 @@
           <div class="menu-kicker"><span class="kicker-line"></span>PIXEL ARCADE<span class="kicker-line"></span></div>
           <h1 id="title">볼 피하기</h1>
           <p class="menu-description" id="description">날아오는 공을 피하며 웨이브를 돌파하세요.<br>웨이브 5부터 저격수가 돌진합니다.</p>
-          <div class="start-prompt" aria-hidden="true"><span class="enter-key">ENTER</span><span class="prompt-label">시작하려면 Enter를 누르세요</span></div>
+          <button class="start-prompt" id="start-prompt" type="button"><span class="enter-key">ENTER</span><span class="prompt-label">시작하려면 터치하거나 Enter를 누르세요</span></button>
           <div class="menu-divider"></div>
           <div class="control-guide">
             <div class="wasd-guide" aria-label="WASD 키로 이동"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
