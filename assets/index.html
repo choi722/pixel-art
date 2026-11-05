@@ -7,7 +7,9 @@
   <title>픽셀 볼 피하기</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/mobile-layout.css">
   <script src="/game.js" defer></script>
+  <script src="/mobile-layout.js" defer></script>
 </head>
 <body>
   <main class="game-shell">
@@ -39,13 +41,10 @@
           <p class="mouse-notice">M 키: 사운드 켜기/끄기 · 키보드 조작 전용</p>
         </div>
       </section>
-
       <section class="mobile-controls" id="mobile-controls" aria-label="모바일 게임 조작">
         <button class="mobile-start" id="mobile-start" type="button">게임 시작</button>
         <div class="mobile-pad-area" id="mobile-pad-area">
-          <div class="joystick" id="joystick" role="application" aria-label="가상 조이스틱으로 이동">
-            <div class="joystick-knob" id="joystick-knob"></div>
-          </div>
+          <div class="joystick" id="joystick" role="application" aria-label="가상 조이스틱으로 이동"><div class="joystick-knob" id="joystick-knob"></div></div>
           <div class="dpad" id="dpad" aria-label="방향키로 이동" hidden>
             <button type="button" data-dir="up" aria-label="위">▲</button>
             <button type="button" data-dir="left" aria-label="왼쪽">◀</button>
@@ -56,11 +55,17 @@
         <button class="control-settings-button" id="control-settings-button" type="button" aria-expanded="false" aria-controls="control-settings">조작 설정</button>
         <aside class="control-settings" id="control-settings" aria-label="모바일 조작 설정" hidden>
           <strong>모바일 조작 설정</strong>
-          <p>원하는 이동 방식을 선택하세요.</p>
+          <p>조작 방식과 화면 방향을 선택하세요.</p>
           <div class="control-mode-options">
             <button type="button" data-control-mode="joystick">조이스틱</button>
             <button type="button" data-control-mode="dpad">방향키</button>
           </div>
+          <div class="display-mode-options" aria-label="화면 방향 설정">
+            <button type="button" data-display-mode="auto">자동 맞춤</button>
+            <button type="button" data-display-mode="portrait">세로 모드</button>
+            <button type="button" data-display-mode="landscape">가로 모드</button>
+          </div>
+          <p class="orientation-hint" id="orientation-hint">자동 맞춤: 기기 방향에 맞춰 화면을 배치합니다.</p>
           <button type="button" class="settings-close" id="settings-close">닫기</button>
         </aside>
       </section>

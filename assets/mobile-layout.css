@@ -1,0 +1,80 @@
+/* Phone-first layout overrides. The game canvas keeps its native 16:9 ratio. */
+@media (pointer: coarse) and (max-width: 900px) {
+  html, body { width: 100%; height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+  body { display: block; }
+  .game-shell { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
+  .game-frame { width: 100%; height: 100%; overflow: hidden; background: #090914; }
+  #game { position: absolute; image-rendering: pixelated; }
+
+  .game-frame.layout-portrait #game {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 48dvh;
+  }
+  .game-frame.layout-landscape #game {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .game-frame.layout-portrait .hud { top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; }
+  .game-frame.layout-landscape .hud { top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); }
+  .hud { flex-wrap: wrap; justify-content: flex-start; font-size: clamp(10px, 2.8vw, 14px); gap: 5px; }
+  .hud-item { padding: 5px 7px; }
+
+  .menu-overlay { z-index: 4; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+  .menu-panel { width: min(460px, 100%); max-height: 88dvh; overflow-y: auto; padding: clamp(16px, 4vw, 26px); }
+  .menu-kicker { margin-bottom: 10px; }
+  .menu-description { margin: 8px 0 14px; font-size: clamp(12px, 3.5vw, 15px); line-height: 1.55; }
+  .menu-divider { margin: 14px 0 12px; }
+  .mouse-notice { margin-top: 12px; }
+  .start-prompt { min-width: 0; width: min(100%, 300px); padding: 9px 10px; }
+
+  .mobile-controls { height: auto; min-height: 0; inset: auto 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .mobile-pad-area { left: max(18px, env(safe-area-inset-left)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px)); width: clamp(112px, 32vw, 148px); height: clamp(112px, 32vw, 148px); }
+  .mobile-start, .control-settings-button { min-height: 46px; font-size: 14px; }
+  .mobile-start { bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px)); }
+  .control-settings-button { bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px)); }
+  .control-settings { bottom: max(126px, calc(env(safe-area-inset-bottom) + 118px)); max-height: min(58dvh, 390px); overflow-y: auto; }
+  .control-mode-options, .display-mode-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .display-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px; }
+  .display-mode-options button { min-height: 40px; padding: 4px; border: 1px solid #625a9e; border-radius: 9px; color: #fff; background: #242143; font: inherit; font-size: 12px; }
+  .display-mode-options button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); background: #203b42; }
+  .orientation-hint { margin: 8px 0 !important; font-size: 11px !important; line-height: 1.45; }
+  .control-mode-options button, .settings-close { min-height: 42px; }
+  .dpad { grid-template: repeat(3, clamp(38px, 12vw, 48px)) / repeat(3, clamp(38px, 12vw, 48px)); }
+
+  .game-frame.layout-portrait .mobile-controls {
+    background: linear-gradient(180deg, transparent 0, rgb(9 9 20 / 78%) 25%, #090914 48%);
+    height: 54dvh;
+  }
+  .game-frame.layout-landscape .mobile-controls {
+    height: 48%;
+    background: linear-gradient(180deg, transparent, rgb(9 9 20 / 52%));
+  }
+  .game-frame.layout-landscape .mobile-pad-area { left: max(14px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); width: clamp(100px, 22vh, 138px); height: clamp(100px, 22vh, 138px); }
+  .game-frame.layout-landscape .mobile-start { right: max(14px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); }
+  .game-frame.layout-landscape .control-settings-button { right: max(14px, env(safe-area-inset-right)); bottom: max(62px, calc(env(safe-area-inset-bottom) + 54px)); }
+  .game-frame.layout-landscape .control-settings { right: max(14px, env(safe-area-inset-right)); bottom: max(116px, calc(env(safe-area-inset-bottom) + 108px)); }
+  .game-frame.layout-landscape .menu-panel { width: min(480px, 88%); max-height: 85dvh; }
+}
+
+@media (pointer: coarse) and (max-width: 900px) and (orientation: portrait) {
+  .game-frame.layout-auto #game { top: 0; left: 0; width: 100vw; height: auto; aspect-ratio: 16 / 9; max-height: 48dvh; }
+  .game-frame.layout-auto .mobile-controls { height: 54dvh; background: linear-gradient(180deg, transparent 0, rgb(9 9 20 / 78%) 25%, #090914 48%); }
+}
+
+@media (pointer: coarse) and (max-width: 900px) and (orientation: landscape) {
+  .game-frame.layout-auto #game { inset: 0; width: 100%; height: 100%; }
+  .game-frame.layout-auto .mobile-controls { height: 48%; background: linear-gradient(180deg, transparent, rgb(9 9 20 / 52%)); }
+}
+
+@media (max-height: 500px) and (pointer: coarse) {
+  .game-frame.layout-landscape .menu-panel, .game-frame.layout-auto .menu-panel { padding: 10px 18px; }
+  .game-frame.layout-landscape .menu-kicker, .game-frame.layout-auto .menu-kicker { margin-bottom: 5px; }
+  .game-frame.layout-landscape .menu-description, .game-frame.layout-auto .menu-description { margin: 4px 0 8px; }
+  .game-frame.layout-landscape .menu-divider, .game-frame.layout-auto .menu-divider { margin: 8px 0; }
+}
