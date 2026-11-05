@@ -53,24 +53,6 @@
     gain.gain.setValueAtTime(volume, start + duration * 0.55); gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     osc.connect(gain); gain.connect(masterGain); osc.start(start); osc.stop(start + duration + 0.02);
   }
-  // Short filtered noise transient for an original arcade-style pixel sniper crack (not a drum hit).
-  function playSniperCrack(delay = 0) {
-    if (!soundEnabled || !audioContext || !masterGain) return;
-    const start = audioContext.currentTime + delay, duration = 0.16;
-    const length = Math.floor(audioContext.sampleRate * duration), buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
-    const samples = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) samples[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.8);
-    const source = audioContext.createBufferSource(), filter = audioContext.createBiquadFilter(), gain = audioContext.createGain();
-    source.buffer = buffer; filter.type = "highpass"; filter.frequency.setValueAtTime(850, start);
-    filter.frequency.exponentialRampToValueAtTime(2600, start + 0.018);
-    filter.frequency.exponentialRampToValueAtTime(700, start + duration);
-    gain.gain.setValueAtTime(0.0001, start); gain.gain.linearRampToValueAtTime(0.34, start + 0.003);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    source.connect(filter); filter.connect(gain); gain.connect(masterGain); source.start(start); source.stop(start + duration);
-    // Tight, descending synthetic laser body gives the cue a sharp game-weapon character.
-    playTone(1550, 0.12, "sawtooth", 0.16, 180, delay);
-    playTone(2450, 0.035, "square", 0.10, 900, delay);
-  }
   function updateSoundLabel() { if (soundLabel) soundLabel.textContent = soundEnabled ? "사운드 ON · M 키로 끄기" : "사운드 OFF · M 키로 켜기"; }
   function setSoundEnabled(enabled) {
     soundEnabled = enabled;
@@ -79,17 +61,62 @@
   }
   function playStartSound() { playTone(440, 0.09, "square", 0.11); playTone(660, 0.13, "square", 0.11, null, 0.1); }
   function playWaveSound(wave) { const note = 500 + Math.min(wave, 10) * 24; playTone(note, 0.09, "square", 0.1); playTone(note * 1.25, 0.13, "square", 0.1, null, 0.12); }
-  // Rising, filtered electronic charge instead of the previous bassy triple-boom.
+
+  // Original arcade-style sniper cue: a rising electronic charge followed by a
+  // short, bright filtered shot crack. It intentionally avoids low drum-like booms.
   function playSniperWarning() {
     if (!soundEnabled || !audioContext || !masterGain) return;
-    const start = audioContext.currentTime, osc = audioContext.createOscillator(), filter = audioContext.createBiquadFilter(), gain = audioContext.createGain();
-    osc.type = "sawtooth"; osc.frequency.setValueAtTime(280, start); osc.frequency.exponentialRampToValueAtTime(1450, start + 0.42);
-    filter.type = "bandpass"; filter.frequency.setValueAtTime(650, start); filter.frequency.exponentialRampToValueAtTime(2200, start + 0.42); filter.Q.value = 3.5;
-    gain.gain.setValueAtTime(0.0001, start); gain.gain.linearRampToValueAtTime(0.095, start + 0.08); gain.gain.setValueAtTime(0.095, start + 0.30); gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.46);
-    osc.connect(filter); filter.connect(gain); gain.connect(masterGain); osc.start(start); osc.stop(start + 0.48);
-    playTone(95, 0.12, "sine", 0.14, 55, 0.40);
+    const start = audioContext.currentTime;
+
+    const charge = audioContext.createOscillator();
+    const chargeFilter = audioContext.createBiquadFilter();
+    const chargeGain = audioContext.createGain();
+    charge.type = "sawtooth";
+    charge.frequency.setValueAtTime(170, start);
+    charge.frequency.exponentialRampToValueAtTime(1750, start + 0.46);
+    chargeFilter.type = "highpass";
+    chargeFilter.frequency.setValueAtTime(420, start);
+    chargeFilter.frequency.exponentialRampToValueAtTime(1450, start + 0.44);
+    chargeFilter.Q.value = 1.8;
+    chargeGain.gain.setValueAtTime(0.0001, start);
+    chargeGain.gain.linearRampToValueAtTime(0.075, start + 0.09);
+    chargeGain.gain.setValueAtTime(0.075, start + 0.34);
+    chargeGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.48);
+    charge.connect(chargeFilter); chargeFilter.connect(chargeGain); chargeGain.connect(masterGain);
+    charge.start(start); charge.stop(start + 0.5);
+
+    // A quieter square-wave edge layered over the sweep adds a pixel/arcade bite.
+    playTone(360, 0.42, "square", 0.035, 2100);
   }
-  function playDashSound() { playSniperCrack(); }
+  function playSniperShot() {
+    if (!soundEnabled || !audioContext || !masterGain) return;
+    const start = audioContext.currentTime, duration = 0.115;
+    const length = Math.max(1, Math.floor(audioContext.sampleRate * duration));
+    const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+    const samples = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      const envelope = Math.pow(1 - i / length, 3.2);
+      samples[i] = (Math.random() * 2 - 1) * envelope;
+    }
+    const noise = audioContext.createBufferSource();
+    const highpass = audioContext.createBiquadFilter();
+    const noiseGain = audioContext.createGain();
+    noise.buffer = buffer;
+    highpass.type = "highpass";
+    highpass.frequency.setValueAtTime(1150, start);
+    highpass.frequency.exponentialRampToValueAtTime(3200, start + 0.012);
+    highpass.frequency.exponentialRampToValueAtTime(850, start + duration);
+    noiseGain.gain.setValueAtTime(0.0001, start);
+    noiseGain.gain.linearRampToValueAtTime(0.24, start + 0.002);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    noise.connect(highpass); highpass.connect(noiseGain); noiseGain.connect(masterGain);
+    noise.start(start); noise.stop(start + duration);
+
+    // Fast falling sawtooth plus a very brief square transient makes it read as a shot.
+    playTone(2100, 0.12, "sawtooth", 0.12, 260);
+    playTone(3100, 0.025, "square", 0.075, 1150);
+  }
+  function playDashSound() { playSniperShot(); }
   function playHitSound() { playTone(220, 0.23, "square", 0.18, 75); playTone(110, 0.18, "triangle", 0.11, 55, 0.08); }
 
   function updateHud() {
