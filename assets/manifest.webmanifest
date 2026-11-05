@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "픽셀 볼 피하기",
+  "short_name": "볼 피하기",
+  "description": "픽셀 볼 피하기 아케이드 게임",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#090914",
+  "theme_color": "#090914",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
